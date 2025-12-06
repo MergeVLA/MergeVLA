@@ -150,6 +150,7 @@ cache/
 data/
 pretrained_models/
 !pretrained_models/configs/
+!pretrained_models/configs/**
 outputs/
 *.pt
 *.pkl
