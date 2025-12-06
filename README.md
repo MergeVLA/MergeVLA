@@ -62,7 +62,7 @@ pip install -e .
 
 The LIBERO datasets can be downloaded directly from [here](https://huggingface.co/datasets/yifengzhu-hf/LIBERO-datasets) or obtained following the official [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) documentation. To train on LIBERO, the raw demonstrations must be converted into the RLDS format. You may either download the RLDS-converted version from [here](https://huggingface.co/datasets/openvla/modified_libero_rlds) or convert by yourself using this [code](https://github.com/moojink/rlds_dataset_builder).
 
-### Performance on LIBERO benchmark. 
+#### Performance on LIBERO benchmark. 
 
 | Method                           | Spatial  |  Object  |   Goal   | Long-10  |   Avg    |
 | -------------------------------- |:--------:|:--------:|:--------:|:--------:|:--------:|
