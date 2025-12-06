@@ -6,14 +6,6 @@ This repository provides the official implementation of **MergeVLA**.
 **📝 [Paper](https://arxiv.org/abs/2511.18810) | 🌍 [Project Page](https://mergevla.github.io/)**
 
 ---
-## :star2: Abstract
-Recent Vision-Language-Action (VLA) models reformulate vision-language models by tuning them with millions of robotic demonstrations. While they perform well when fine-tuned for a single embodiment or task family, extending them to multi-skill settings remains challenging: directly merging VLA experts trained on different tasks results in near-zero success rates. This raises a fundamental question: what prevents VLAs from mastering multiple skills within one model? In this work, we identify two key sources of *non-mergeability*: (1) LoRA adapters in the VLM drift toward divergent, task-specific directions during fine-tuning, and (2) self-attention in action experts creates inter-block dependencies that prevent modular recomposition. 
-
-MergeVLA addresses these issues with a merging-oriented architecture that preserves mergeability across tasks. It employs sparsely activated LoRA adapters via task masks to reduce irreconcilable conflicts in the VLM, and apply cross-attention-only action experts to keep specialization localized. A task router selects the appropriate mask and expert head from the initial observation to enable unsupervised task inference.
-
-![model_arch](figures/MergeVLA_model_arch.jpg)
-
----
 
 ## :scroll: Table of Contents
 - [:star2: Abstract](#star2-abstract)
@@ -24,6 +16,15 @@ MergeVLA addresses these issues with a merging-oriented architecture that preser
 - [:test_tube: Evaluation](#test_tube-evaluation)
 - [:memo: Citation](#citation)
 - [:heart: Acknowledgment](#heart-acknowledgment)
+
+---
+
+## :star2: Abstract
+Recent Vision-Language-Action (VLA) models reformulate vision-language models by tuning them with millions of robotic demonstrations. While they perform well when fine-tuned for a single embodiment or task family, extending them to multi-skill settings remains challenging: directly merging VLA experts trained on different tasks results in near-zero success rates. This raises a fundamental question: what prevents VLAs from mastering multiple skills within one model? In this work, we identify two key sources of *non-mergeability*: (1) LoRA adapters in the VLM drift toward divergent, task-specific directions during fine-tuning, and (2) self-attention in action experts creates inter-block dependencies that prevent modular recomposition. 
+
+MergeVLA addresses these issues with a merging-oriented architecture that preserves mergeability across tasks. It employs sparsely activated LoRA adapters via task masks to reduce irreconcilable conflicts in the VLM, and apply cross-attention-only action experts to keep specialization localized. A task router selects the appropriate mask and expert head from the initial observation to enable unsupervised task inference.
+
+![model_arch](figures/MergeVLA_model_arch.jpg)
 
 ---
 
