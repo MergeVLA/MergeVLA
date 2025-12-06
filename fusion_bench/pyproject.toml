@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fusion_bench"
+description = "A Comprehensive Benchmark of Deep Model Fusion"
+readme = "README.md"
+version = "0.2.25dev"
+authors = [{ name = "Anke Tang", email = "tang.anke@foxmail.com" }]
+license-files = ["LICENSE"]
+requires-python = ">= 3.9"
+dependencies = [
+    "hydra-core",
+    "lightning",
+    "transformers",
+    "datasets",
+    "peft",
+    "huggingface_hub",
+    "matplotlib",
+    "tensorboard",
+    "tqdm",
+    "rich",
+    "scipy",
+    "h5py",
+    "pytest",
+    "joblib",
+    "bidict",
+    "transformers!=4.49", # Known issue with version 4.49 when running flan-t5 inference
+    "pillow!=11.2.1",     # Known issue with version 11.2.1 when loading food101 dataset
+]
+keywords = ["deep learning", "model fusion", "benchmark"]
+
+[project.urls]
+Repository = "https://github.com/tanganke/fusion_bench"
+Homepage = "https://github.com/tanganke/fusion_bench"
+Issues = "https://github.com/tanganke/fusion_bench/issues"
+
+[project.scripts]
+fusion_bench = "fusion_bench.scripts.cli:main"
+fusion_bench_webui = "fusion_bench.scripts.webui:main"
+
+[tool.setuptools]
+include-package-data = true
+package-dir = { "fusion_bench" = "fusion_bench" }
+
+[tool.setuptools.package-data]
+fusion_bench = [
+    '../fusion_bench_config/**/*',
+    'models/model_card_templates/**/*',
+]
+
+[tool.isort]
+profile = "black"
+
+[project.optional-dependencies]
+lm-eval-harness = ["lm-eval", "immutabledict", "langdetect", 'rich-run']
+docs = ["mkdocs", "mkdocs-material", "mkdocstrings[python]"]
