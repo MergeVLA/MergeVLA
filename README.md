@@ -64,15 +64,15 @@ The LIBERO datasets can be downloaded directly from [here](https://huggingface.c
 
 ### Performance on LIBERO benchmark. 
 
-| Method                           | Spatial  | Object   | Goal     | Long-10  | Avg      |
-| -------------------------------- | -------- | -------- | -------- | -------- | -------- |
-| $\mathrm{MergeVLA}_\mathrm{FT}$  | 98.0     | 98.6     | 95.0     | 95.0     | 96.7     |
-| $\mathrm{MergeVLA}_\mathrm{EMR}$ | 96.0     | 63.2     | 62.0     | 40.6     | 65.5     |
-| $\mathrm{MergeVLA_{TSV}}$        | **99.4** | 97.8     | 74.4     | 54.8     | 81.6     |
-| $\mathrm{MergeVLA_{KnOTS}}$      | 96.8     | 98.8     | 84.8     | 71.4     | 88.0     |
-| $\mathrm{MergeVLA_{TA}}$         | 98.0     | **98.8** | 85.4     | 76.6     | 89.7     |
-| $\mathrm{MergeVLA_{WUDI}}$       | 97.6     | 98.2     | 85.6     | 78.2     | 89.9     |
-| $\mathrm{MergeVLA_{TIES}}$       | 94.8     | 94.6     | **91.8** | **79.4** | **90.2** |
+| Method                           | Spatial  |  Object  |   Goal   | Long-10  |   Avg    |
+| -------------------------------- |:--------:|:--------:|:--------:|:--------:|:--------:|
+| $\mathrm{MergeVLA}_\mathrm{FT}$  |   98.0   |   98.6   |   95.0   |   95.0   |   96.7   |
+| $\mathrm{MergeVLA}_\mathrm{EMR}$ |   96.0   |   63.2   |   62.0   |   40.6   |   65.5   |
+| $\mathrm{MergeVLA_{TSV}}$        | **99.4** |   97.8   |   74.4   |   54.8   |   81.6   |
+| $\mathrm{MergeVLA_{KnOTS}}$      |   96.8   |   98.8   |   84.8   |   71.4   |   88.0   |
+| $\mathrm{MergeVLA_{TA}}$         |   98.0   | **98.8** |   85.4   |   76.6   |   89.7   |
+| $\mathrm{MergeVLA_{WUDI}}$       |   97.6   |   98.2   |   85.6   |   78.2   |   89.9   |
+| $\mathrm{MergeVLA_{TIES}}$       |   94.8   |   94.6   | **91.8** | **79.4** | **90.2** |
 
 ---
 
