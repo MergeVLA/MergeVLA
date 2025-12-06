@@ -2,7 +2,6 @@ import os
 import json
 import copy
 import torch
-from torch import nn
 from tqdm import tqdm
 import lightning as L
 from enum import Enum
@@ -26,8 +25,8 @@ from transformers import AutoConfig, AutoModelForVision2Seq
 from prismatic.models import load
 from prismatic.models.moe_model import svd
 from fusion_bench.method import (
-    TaskArithmeticAlgorithm, ISO_CTS_Merge, WeightedAverageAlgorithm, 
-    TiesMergingAlgorithm, TallMaskTaskArithmeticAlgorithm, TM_ISO_CTS_Merge,
+    TaskArithmeticAlgorithm, WeightedAverageAlgorithm, 
+    TiesMergingAlgorithm, TallMaskTaskArithmeticAlgorithm,
     TallMaskTiesMergingAlgorithm, TaskSingularVectorMerging,
     WUDIMerging, TallMaskTaskSingularVectorMerging, TallMaskWUDIMerging,
     EMRMerging, KnotsMerging, TallMaskKnotsMerging
@@ -281,7 +280,7 @@ def get_algo(algo_name: str, exclude_keys=None, eval_task=None, return_all_masks
     print(f"num_excluded_keys: {len(exclude_keys) if exclude_keys else 0}, algo_name: {algo_name}, eval_task: {eval_task if eval_task else 'None'}, return_all_masks: {return_all_masks}, WA_weights: {WA_weights}")
     return algorithm, device
 
-def merge_as_single_model(merged_tasks, algo_name, k_gate, action_head_layer_num, save_dir: str = "outputs", note: str = None):
+def merge(merged_tasks, algo_name, k_gate, action_head_layer_num, save_dir: str = "outputs", note: str = None):
     if isinstance(algo_name, str): # algo_name is like "TA_tall_mask" or ["TA_tall_mask", "weighted_average"]
         algo_name = [algo_name] * 2 
     else:
@@ -447,7 +446,7 @@ def load_moe_model(shared_weight_model, expert_models_dict, k_gate, action_head_
             gating_factor = torch.cat(gating_factor)
             sd[k] = gating_factor.clone()
             tqdm.write(f"{share_key} -> {k}")
-        elif "gate_layer_idx" in k:
+        elif "router_layer_idx" in k:
             sd[k] = torch.tensor(share_layer_num-1, dtype=torch.long)
             tqdm.write(f"{k} -> {share_layer_num-1}")
         elif "experts.1." in k or "experts.2." in k or "experts.3." in k:
@@ -561,5 +560,5 @@ if __name__ == "__main__":
     algo_name = ["TATallMask", "weighted_average"]
     action_head_layer_num = 1
     k_gate = 8
-    merge_as_single_model(merged_tasks=merged_tasks, algo_name=algo_name, k_gate=k_gate, action_head_layer_num=action_head_layer_num, 
-                          note=f'{len(merged_tasks)}tasks_AHnum_{action_head_layer_num}_k_{k_gate}', save_dir="outputs")
+    merge(merged_tasks=merged_tasks, algo_name=algo_name, k_gate=k_gate, action_head_layer_num=action_head_layer_num, 
+                          note=f'{len(merged_tasks)}tasks_AHnum_{action_head_layer_num}_k_{k_gate}')

@@ -558,15 +558,15 @@ def eval_libero(cfg: GenerateConfig) -> float:
         cfg.num_experts = len(task2idx)
         
         cfg_for_identity = copy.deepcopy(cfg)
-        cfg_for_identity.is_task_identity = True
+        cfg_for_identity.use_router = True
         cfg_for_identity.task2idx = task2idx
-        expert_name, expert_idx = task_identity(cfg_for_identity)
+        expert_name, expert_idx = task_router(cfg_for_identity)
         
         cfg.expert_name = expert_name
         cfg.expert_idx = expert_idx
     else:
         cfg.expert_name = cfg.task_suite_name
-    cfg.is_task_identity = False
+    cfg.use_router = False
     
     # Validate configuration
     validate_config(cfg)
@@ -635,7 +635,7 @@ def eval_libero(cfg: GenerateConfig) -> float:
     return final_success_rate
 
 
-def task_identity(cfg: GenerateConfig) -> float:
+def task_router(cfg: GenerateConfig) -> float:
     """Identify the task through the observations and test-time router."""
     validate_config(cfg)
     set_seed_everywhere(cfg.seed)

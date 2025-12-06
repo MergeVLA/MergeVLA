@@ -149,9 +149,11 @@ dmypy.json
 cache/
 data/
 pretrained_models/
+!pretrained_models/configs/
 outputs/
 *.pt
 *.pkl
+*.back.*
 
 # Rollout videos and wandb logs and logs
 rollouts/

@@ -536,7 +536,7 @@ def get_moe_action_head(cfg: Any, llm_dim: int) -> Union[L1RegressionMoEActionHe
         k_gate=cfg.k_gate,
         action_head_layer_num=cfg.action_head_layer_num,
         expert_idx=cfg.expert_idx,
-        is_task_identity=cfg.is_task_identity
+        use_router=cfg.use_router
     )
 
     action_head = action_head.to(torch.bfloat16).to(DEVICE)

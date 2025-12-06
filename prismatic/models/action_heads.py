@@ -405,7 +405,7 @@ class L1RegressionMoEActionHead(nn.Module):
         k_gate=8,
         action_head_layer_num=1,
         expert_idx=None,
-        is_task_identity=False
+        use_router=False
     ):
         super().__init__()
         self.num_task_tokens = num_task_tokens
@@ -420,7 +420,7 @@ class L1RegressionMoEActionHead(nn.Module):
             num_experts=num_experts,
             k_gate=k_gate,
             action_head_layer_num=action_head_layer_num,
-            is_task_identity=is_task_identity,
+            use_router=use_router,
         )
 
     def predict_action(
@@ -477,11 +477,11 @@ class MLPMoEResNet(nn.Module):
             num_experts=4,
             k_gate=8,
             action_head_layer_num=1,
-            is_task_identity=False,
+            use_router=False,
         ):
         
         super().__init__()
-        self.is_task_identity = is_task_identity
+        self.use_router = use_router
 
         self.layer_norm1 = nn.LayerNorm(input_dim)
         self.fc1 = nn.Linear(input_dim, hidden_dim)
@@ -501,7 +501,7 @@ class MLPMoEResNet(nn.Module):
 
         modules = self._define_gate_modules()
         self.gate = SmileMoEGate(modules, num_experts, k=k_gate)
-        self.gate_layer_idx = nn.Parameter(torch.tensor(-1, dtype=torch.long), requires_grad=False)
+        self.router_layer_idx = nn.Parameter(torch.tensor(-1, dtype=torch.long), requires_grad=False)
 
     def _define_gate_modules(self):
         module_names = [f'mlp_resnet_blocks.{24-self.action_head_layer_num-1}.v_adapter',
@@ -524,8 +524,8 @@ class MLPMoEResNet(nn.Module):
             x = block(x, h_t = h_t[:,i+1,:], h_a = h_a[:,i+1,:], p=p)  # shape: (batch_size, hidden_dim)
         
         # # calculate gate
-        if self.is_task_identity:
-            assert self.gate_layer_idx.item() == i, f"Expected gate to be applied at layer {self.gate_layer.item()}, but got layer {i}, the checkpoint does not match the current model configuration."
+        if self.use_router:
+            assert self.router_layer_idx.item() == i, f"Expected gate to be applied at layer {self.router_layer_idx.item()}, but got layer {i}, the checkpoint does not match the current model configuration."
             router_logits = self.gate(h_t = h_t[:,i+2,:], h_a = h_a[:,i+2,:], expert_idx=expert_idx)
             return router_logits
 
