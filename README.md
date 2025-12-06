@@ -16,6 +16,14 @@ MergeVLA addresses these issues with a merging-oriented architecture that preser
 ---
 
 ## :scroll: Table of Contents
+- [:star2: Abstract](#star2-abstract)
+- [:rocket: Quick Start](#rocket-quick-start)
+- [:package: Data Preparation](#package-data-preparation)
+- [:fire: Training](#fire-training)
+- [:twisted_rightwards_arrows: Model Merging](#twisted_rightwards_arrows-model-merging)
+- [:test_tube: Evaluation](#test_tube-evaluation)
+- [:memo: Citation](#citation)
+- [:heart: Acknowledgment](#heart-acknowledgment)
 
 ---
 
