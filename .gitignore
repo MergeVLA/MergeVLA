@@ -150,11 +150,10 @@ cache/
 data/
 pretrained_models/
 !pretrained_models/configs/
-
+pretrained_models/configs/*.back.*
 outputs/
 *.pt
 *.pkl
-*.back.*
 
 # Rollout videos and wandb logs and logs
 rollouts/
