@@ -12,9 +12,7 @@ Recent Vision-Language-Action (VLA) models reformulate vision-language models by
 
 MergeVLA addresses these issues with a merging-oriented architecture that preserves mergeability across tasks. It employs sparsely activated LoRA adapters via task masks to reduce irreconcilable conflicts in the VLM, and apply cross-attention-only action experts to keep specialization localized. A task router selects the appropriate mask and expert head from the initial observation to enable unsupervised task inference.
 
-
-
-![model_arch](https://hackmd.io/_uploads/BkZQtdbfbg.jpg)figures/MergeVLA_model_arch.jpg
+![model_arch](figures/MergeVLA_model_arch.jpg)
 
 ---
 
