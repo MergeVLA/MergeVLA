@@ -557,13 +557,8 @@ def eval_libero(cfg: GenerateConfig) -> float:
         
         cfg.num_experts = len(task2idx)
         
-        cfg_for_identity = copy.deepcopy(cfg)
-        cfg_for_identity.use_router = True
-        cfg_for_identity.task2idx = task2idx
-        expert_name, expert_idx = task_router(cfg_for_identity)
-        
-        cfg.expert_name = expert_name
-        cfg.expert_idx = expert_idx
+        cfg.expert_name = cfg.task_suite_name
+        cfg.expert_idx = task2idx[cfg.task_suite_name]
     else:
         cfg.expert_name = cfg.task_suite_name
     cfg.use_router = False
