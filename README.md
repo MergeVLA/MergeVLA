@@ -125,6 +125,7 @@ bash bash_scripts/eval.sh
 # Evaluate merged models
 bash bash_scripts/eval_merged.sh
 ```
+For **LIBERO-plus** evaluation, we use **the same checkpoints trained on LIBERO** (available via the links above); only the environment needs to be switched to LIBERO-plus. We also identified a bug in our previous script that converted task-suite performance to shift-type performance. **After fixing this issue, the correct average performance is around 73%.** We will recently upload the evaluation logs and update the arXiv version.
 
 ---
 
