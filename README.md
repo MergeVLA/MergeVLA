@@ -6,7 +6,10 @@ This repository provides the official implementation of **MergeVLA**.
 
 **📝 [Paper](https://arxiv.org/abs/2511.18810) | 🌍 [Project Page](https://mergevla.github.io/) | 🤗 [HuggingFace](https://huggingface.co/FYX026/MergeVLA-LIBERO)**
 
+⚠️**2026/01/30:**   We identified a bug in our previous script that converted task-suite performance to shift-type performance. **After fixing this issue, the correct average performance is around 73%, and VLA-Adapter should be around 60%**. We have uploaded the evaluation logs and will update the arXiv version soon.
+
 ---
+
 ## :star2: Abstract
 Recent Vision-Language-Action (VLA) models reformulate vision-language models by tuning them with millions of robotic demonstrations. While they perform well when fine-tuned for a single embodiment or task family, extending them to multi-skill settings remains challenging: directly merging VLA experts trained on different tasks results in near-zero success rates. This raises a fundamental question: what prevents VLAs from mastering multiple skills within one model? In this work, we identify two key sources of *non-mergeability*: (1) LoRA adapters in the VLM drift toward divergent, task-specific directions during fine-tuning, and (2) self-attention in action experts creates inter-block dependencies that prevent modular recomposition. 
 
@@ -127,7 +130,6 @@ bash bash_scripts/eval_merged.sh
 ```
 For **LIBERO-plus** evaluation, we use **the same checkpoints trained on LIBERO** (available via the links above); only the environment needs to be switched to LIBERO-plus.
 
-⚠️**2026/01/30:**   We identified a bug in our previous script that converted task-suite performance to shift-type performance. **After fixing this issue, the correct average performance is around 73%, and VLA-Adapter should be around 60%**. We will recently upload the evaluation logs and update the arXiv version.
 
 ---
 
