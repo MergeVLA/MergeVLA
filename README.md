@@ -6,7 +6,7 @@ This repository provides the official implementation of **MergeVLA**.
 
 **📝 [Paper](https://arxiv.org/abs/2511.18810) | 🌍 [Project Page](https://mergevla.github.io/) | 🤗 [HuggingFace](https://huggingface.co/FYX026/MergeVLA-LIBERO)**
 
-⚠️**2026/01/30:**   We identified a bug in our previous script that converted task-suite performance to shift-type performance. **After fixing this issue, the correct average performance is around 73%, and VLA-Adapter should be around 60%**. We have uploaded the evaluation logs and will update the arXiv version soon.
+🎉 **2026/02/21:**  Our paper has been accepted to CVPR 2026
 
 ---
 
