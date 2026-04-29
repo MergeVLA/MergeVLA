@@ -47,7 +47,21 @@ class TaskSuite(str, Enum):
         value = value.value if isinstance(value, cls) else value # Get the string value if Enum
         return value in cls._value2member_map_
 
+tasks = {
+    "spatial": TaskSuite.LIBERO_SPATIAL,
+    "object": TaskSuite.LIBERO_OBJECT,
+    "goal": TaskSuite.LIBERO_GOAL,
+    "10": TaskSuite.LIBERO_10
+}
+ckptsprosigmoid = {
+    "spatial": "/path/to/spatial_ckpt",
+    "object": "/path/to/object_ckpt",
+    "goal": "/path/to/goal_ckpt",
+    "10": "/path/to/long10_ckpt"
+}
+
 def invert_keys(all_keys, exclude_keys):
+    """Return keys in all_keys that are not in exclude_keys."""
     return [k for k in all_keys if k not in exclude_keys]
 
 def initialize_model(cfg: GenerateConfig):
@@ -65,7 +79,7 @@ def initialize_model(cfg: GenerateConfig):
     return model, action_head, proprio_projector
 
 def initialize_moe_model(cfg: GenerateConfig):
-    """Initialize model and associated components."""
+    """Initialize moe model and associated components."""
     model = get_model(cfg)
 
     proprio_projector = get_proprio_projector(
@@ -114,20 +128,8 @@ def initialize_action_head(llm_dim, is_zero_init=True):
                 param.zero_()
     return action_head
 
-tasks = {
-    "spatial": TaskSuite.LIBERO_SPATIAL,
-    "object": TaskSuite.LIBERO_OBJECT,
-    "goal": TaskSuite.LIBERO_GOAL,
-    "10": TaskSuite.LIBERO_10
-}
-ckptsprosigmoid = {
-    "spatial": "/path/to/spatial_ckpt",
-    "object": "/path/to/object_ckpt",
-    "goal": "/path/to/goal_ckpt",
-    "10": "/path/to/long10_ckpt"
-}
-
 def load_vlm(is_zero_init=True):
+    """Load the pretrained VLM backbone and adapt its state_dict to the VLA format."""
     vlm_path = "path/to/prism-qwen25-extra-dinosiglip-224px-0_5b"
     hf_token = 'your_hf_token'
     vlm = load(vlm_path, hf_token=hf_token, load_for_training=True)
@@ -180,6 +182,7 @@ def save_vlm(checkpoint_dir):
         print(f"Saved merged checkpoint to {checkpoint_dir}")
 
 def load_vlm_from_vla():
+    """Load a pretrained VLM from a saved VLA-format checkpoint."""
     vlm_path = "/path/to/Pretrained-VLM"
     cfg = GenerateConfig(pretrained_checkpoint=vlm_path)
     model = get_model(cfg)
@@ -187,6 +190,7 @@ def load_vlm_from_vla():
     return model
 
 def get_algo(algo_name: str, exclude_keys=None, eval_task=None, return_all_masks: bool = False, WA_weights=[0.5, 0.5]):
+    """Return the specified model merging algorithm instance and its execution device."""
     device="cuda"
     if algo_name == "TA":
         algorithm = TaskArithmeticAlgorithm(
@@ -280,7 +284,36 @@ def get_algo(algo_name: str, exclude_keys=None, eval_task=None, return_all_masks
     print(f"num_excluded_keys: {len(exclude_keys) if exclude_keys else 0}, algo_name: {algo_name}, eval_task: {eval_task if eval_task else 'None'}, return_all_masks: {return_all_masks}, WA_weights: {WA_weights}")
     return algorithm, device
 
-def merge(merged_tasks, algo_name, k_gate, action_head_layer_num, save_dir: str = "outputs", note: str = None):
+def merge(merged_tasks, algo_name, k_gate=8, action_head_layer_num=1, eval_task = None, save_dir: str = "outputs", note: str = None):
+    """
+    Main pipeline for merging multiple task-specific VLA models into a unified model.
+
+    This function first loads task-specific checkpoints defined in `ckptsprosigmoid` according to `merged_tasks`,
+    and extracts their components into dictionaries: VLM backbone, proprio projector, and action expert.
+
+    The merging is performed in a component-wise manner:
+    - The model is decomposed into four parts:
+        (1) VLM parameters excluding action query (AQ)
+        (2) Action query (AQ)
+        (3) Proprio projector
+        (4) Action expert (action head)
+
+    - Only the VLM (excluding AQ) contains pretrained weights, so it supports all merging algorithms. TallMask-based merging is particularly effective here.
+
+    - Components without pretrained weights (AQ, proprio projector, action expert) are merged using simple weighted averaging.
+
+    - After merging VLM (without AQ), the merged AQ parameters are inserted back into the VLM.
+
+    - For the action expert:
+        * Only the mergeable part is merged (excluding the final `action_head_layer_num` layers such as fc2 and layer_norm2).
+        * If `eval_task` is provided, non-mergeable parts are replaced with task-specific weights.
+        * Otherwise, all task-specific expert parameters are preserved and converted into a MoE structure.
+
+    - If TallMask is used:
+        * With `eval_task`: masks are applied to the VLM before saving.
+        * Without `eval_task`: all task masks are stored for dynamic switching during inference.
+    """
+
     if isinstance(algo_name, str): # algo_name is like "TA_tall_mask" or ["TA_tall_mask", "weighted_average"]
         algo_name = [algo_name] * 2 
     else:
@@ -310,7 +343,8 @@ def merge(merged_tasks, algo_name, k_gate, action_head_layer_num, save_dir: str 
     VLM_exclude_keys = identical_keys + AQ_keys
     exclude_AQ_keys = invert_keys(vlm_dict[TaskSuite(tasks['spatial'])].state_dict().keys(), AQ_keys) # only exclude AQ
     model_dict = copy.deepcopy(vlm_dict)
-    merged_vlm_TV_model, tall_masks = merge_module(model_dict, "vlm_noAQ", algo_name=algo_name[0], exclude_keys=VLM_exclude_keys)
+    return_all_masks = True if eval_task is None else False
+    merged_vlm_TV_model, tall_masks = merge_module(model_dict, "vlm_noAQ", algo_name=algo_name[0], exclude_keys=VLM_exclude_keys, eval_task=eval_task, return_all_masks=return_all_masks)
     if tall_masks:
         for key, tall_mask in tall_masks.items(): # convert to bool to save storage
             for k,v in tall_mask.items():
@@ -332,21 +366,46 @@ def merge(merged_tasks, algo_name, k_gate, action_head_layer_num, save_dir: str 
     merged_proprio_projector, _ = merge_module(model_dict, "proprio_projector", algo_name=algo_name[1], llm_dim=llm_dim)
 
     #####      Action Head      #####
-    exclude_keys =  [k for k in head_dict[TaskSuite(tasks['spatial'])].state_dict() if "fc2" in k or "layer_norm2" in k or "23." in k]
+    action_head_layers = list(range(24 - action_head_layer_num, 24)) # 24 is the number of total layers 
+    exclude_keys = [
+        k for k in head_dict[next(iter(head_dict))].state_dict()
+        if (
+            "fc2" in k or "layer_norm2" in k 
+            or any(f"{i}." in k for i in action_head_layers)
+        )
+    ]
     model_dict = copy.deepcopy(head_dict)
-    merged_action_head, _ = merge_module(model_dict, "action_head", algo_name=algo_name[1], exclude_keys=exclude_keys, llm_dim=llm_dim)
-    merged_moe_action_head = load_moe_model(merged_action_head, head_dict, k_gate, action_head_layer_num)
-    merged_action_head = merged_moe_action_head
+    merged_action_head, _ = merge_module(model_dict, "action_head", algo_name=algo_name[1], exclude_keys=exclude_keys, eval_task=eval_task, llm_dim=llm_dim, return_all_masks=False)
+    
+    if eval_task is None:
+        merged_moe_action_head = load_moe_model(merged_action_head, head_dict, k_gate, action_head_layer_num)
+        merged_action_head = merged_moe_action_head
 
     #####      Save Model      #####
+    moe_flag = "_MoE_ALL" if eval_task is None else ""
     len_model_dict = len(model_dict) if "_pretrained_" not in model_dict else len(model_dict)-1
-    savename = f"merged_{len_model_dict}_libero_{algo_name[0]}_VLM_{algo_name[1]}_AQ_PP_AH_MoE_ALL"
+    savename = f"merged_{len_model_dict}_libero_{algo_name[0]}_VLM_{algo_name[1]}_AQ_PP_AH{moe_flag}"
     if note: savename += f"_{note}"
     savepath = Path(os.path.join(save_dir, savename))
     save(merged_vlm_TV_model, merged_proprio_projector, merged_action_head, processor, stat, merged_tasks, savepath, tall_masks=tall_masks)
     print("done")
 
-def merge_module(model_dict, module_name, algo_name="TA", exclude_keys=None, eval_task=None, llm_dim=None, is_zero_init=False):
+def merge_module(model_dict, module_name, algo_name="TA", exclude_keys=None, eval_task=None, llm_dim=None, is_zero_init=False, return_all_masks=True):
+    """
+    Perform merging for a specific model component (e.g., VLM, AQ, projector, action head).
+
+    This function applies the selected merging algorithm to a pool of task-specific models.
+
+    Special handling:
+    - If TallMask or EMR is used, task-specific masks may be returned.
+    - If `eval_task` is specified:
+        * Only the merged result for that task is kept (for masked methods).
+        * Non-mergeable parameters (specified by `exclude_keys`) are replaced by task-specific weights.
+
+    Returns:
+        merged_model: merged module
+        tall_masks: optional task masks (if applicable)
+    """
     if eval_task is not None: assert eval_task in model_dict.keys() is not None, f"eval_task {eval_task} not found in model_dict."
 
     print(f"merge module: {module_name} from models: {list(model_dict.keys())} using algorithm: {algo_name}")
@@ -355,7 +414,7 @@ def merge_module(model_dict, module_name, algo_name="TA", exclude_keys=None, eva
         WA_weights = [1/len_model_dict] * len_model_dict
     else:
         WA_weights = None
-    algorithm, device = get_algo(algo_name, exclude_keys=exclude_keys, eval_task=eval_task, WA_weights=WA_weights, return_all_masks=True)
+    algorithm, device = get_algo(algo_name, exclude_keys=exclude_keys, eval_task=eval_task, WA_weights=WA_weights, return_all_masks=return_all_masks)
     for _, model in model_dict.items():
         model.to(device)
     if "average" not in algo_name: # add pretrained model
@@ -369,7 +428,7 @@ def merge_module(model_dict, module_name, algo_name="TA", exclude_keys=None, eva
             assert llm_dim is not None, "llm_dim must be provided for proprio_projector and action_head."
             if module_name == "proprio_projector":
                 model_dict["_pretrained_"] = initialize_proprio_projector(llm_dim, is_zero_init=is_zero_init).to(device)
-            elif module_name == "action_head" or module_name == "AH_output_layer":
+            elif module_name == "action_head":
                 model_dict["_pretrained_"] = initialize_action_head(llm_dim, is_zero_init=is_zero_init).to(device)
             else:
                 raise ValueError(f"Unknown module name: {module_name}")
@@ -378,14 +437,14 @@ def merge_module(model_dict, module_name, algo_name="TA", exclude_keys=None, eva
 
     tall_masks = None
     if ("TallMask" in algo_name or 'EMR' in algo_name) and algorithm.return_all_masks:
-        merged_model, tall_masks = merged_model # return_all_masks = True
+        merged_model, tall_masks = merged_model
 
     if eval_task:
         if "TallMask" in algo_name or 'EMR' in algo_name:
             merged_model = merged_model[eval_task]
              
         sd = merged_model.state_dict()
-        if exclude_keys and module_name != "AQ" and module_name != "AH_output_layer":
+        if exclude_keys and module_name != "AQ":
             for k in exclude_keys:
                 print(f"replace key: {k} from model {eval_task}")
                 sd[k] = model_dict[eval_task].state_dict()[k].clone()
@@ -409,6 +468,23 @@ def save_dataset_statistics(dataset_statistics, run_dir):
         json.dump(dataset_statistics, f_json, indent=2)
 
 def load_moe_model(shared_weight_model, expert_models_dict, k_gate, action_head_layer_num):
+    """
+    Construct a Mixture-of-Experts (MoE) action head from merged shared weights and task-specific experts.
+
+    This function converts a partially merged action head into a full MoE structure:
+
+    - Shared parameters (mergeable layers) are copied from `shared_weight_model`.
+    - Non-mergeable parts (e.g., final layers) are populated using task-specific expert weights.
+    - Each expert is assigned to a separate branch in the MoE architecture.
+    - Gating factors are constructed by concatenating task-specific parameters.
+    - Router layers are configured to control expert selection.
+    - Low-rank projections (via SVD) are used to initialize gating modules.
+
+    The resulting model supports dynamic expert selection across tasks.
+
+    Returns:
+        action_head: MoE action head with both shared and expert-specific parameters.
+    """
     from prismatic.models.action_heads import L1RegressionMoEActionHead
     from prismatic.vla.constants import (ACTION_DIM)
     
@@ -487,9 +563,10 @@ def load_moe_model(shared_weight_model, expert_models_dict, k_gate, action_head_
     return action_head
 
 def create_gate(expert_sds, moe_model_sd, k=8, action_head_layer_num=1):
+    """Construct gating weights for MoE using SVD-based projections from expert parameters."""
     gate_module_name = [
-        f"model.mlp_resnet_blocks.{24-action_head_layer_num-1}.v_adapter.weight",
-        f"model.mlp_resnet_blocks.{24-action_head_layer_num-1}.v_task.weight",
+        f"model.mlp_resnet_blocks.{24-action_head_layer_num}.v_adapter.weight",
+        f"model.mlp_resnet_blocks.{24-action_head_layer_num}.v_task.weight",
     ]
     gate_name_template = "model.gate.gate.{}.routers.{}"
 
@@ -509,6 +586,7 @@ def create_gate(expert_sds, moe_model_sd, k=8, action_head_layer_num=1):
     return moe_model_sd
 
 def get_identity_keys(path, benchmark, expert: List=None):
+    """Identify parameters that are identical across all expert models and the pretrained base model."""
     filepath = os.path.join(path, f'{benchmark}_identical_keys.pt')
     if os.path.exists(filepath):
         print(f"Load identical keys at {filepath}.")
@@ -538,6 +616,7 @@ def get_identity_keys(path, benchmark, expert: List=None):
         return identical_keys
     
 def get_identity_keys_AH(expert: List=None):
+    """Identify parameters that are identical across all action head experts."""
     expert_sds = [e.state_dict() for e in expert]
     sd_spatial, sd_object, sd_goal, sd_10 = expert_sds
     common_keys = set(sd_spatial.keys()) & set(sd_object.keys()) & set(sd_goal.keys()) & set(sd_10.keys())
@@ -552,13 +631,21 @@ def get_identity_keys_AH(expert: List=None):
             and torch.equal(t1, t4)
         ):
             identical_keys.append(k)
-    identical_keys = [k for k in sd_spatial if k in identical_keys and "self" not in k and "film" not in k]
+    identical_keys = [k for k in sd_spatial if k in identical_keys]
     return identical_keys
 
 if __name__ == "__main__":
     merged_tasks = ["spatial", "object", "goal", "10"]
     algo_name = ["TATallMask", "weighted_average"]
+
+    # Merge all tasks into a single unified model with MoE action head (store all task-specific components and masks)
     action_head_layer_num = 1
     k_gate = 8
     merge(merged_tasks=merged_tasks, algo_name=algo_name, k_gate=k_gate, action_head_layer_num=action_head_layer_num, 
-                          note=f'{len(merged_tasks)}tasks_AHnum_{action_head_layer_num}_k_{k_gate}')
+                          note=f'AHnum_{action_head_layer_num}_k_{k_gate}')
+    
+    # Merge models for a specific evaluation task
+    eval_task = "spatial"
+    merge(merged_tasks=merged_tasks, algo_name=algo_name, 
+          eval_task=TaskSuite(tasks[eval_task]),
+          note=f'eval_{eval_task}')
