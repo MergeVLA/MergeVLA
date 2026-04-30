@@ -66,7 +66,7 @@ pip install -e .
 
 The LIBERO datasets can be downloaded directly from [here](https://huggingface.co/datasets/yifengzhu-hf/LIBERO-datasets) or obtained following the official [LIBERO](https://github.com/Lifelong-Robot-Learning/LIBERO) documentation. To train on LIBERO, the raw demonstrations must be converted into the RLDS format. You may either download the RLDS-converted version from [here](https://huggingface.co/datasets/openvla/modified_libero_rlds) or convert by yourself using this [code](https://github.com/moojink/rlds_dataset_builder).
 
-### Performance on LIBERO benchmark. 
+#### Performance on LIBERO benchmark. 
 
 | Method                           | Spatial  |  Object  |   Goal   | Long-10  |   Avg    |
 | -------------------------------- |:--------:|:--------:|:--------:|:--------:|:--------:|
@@ -77,6 +77,10 @@ The LIBERO datasets can be downloaded directly from [here](https://huggingface.c
 | $\mathrm{MergeVLA_{TA}}$         |   98.0   | **98.8** |   85.4   |   76.6   |   89.7   |
 | $\mathrm{MergeVLA_{WUDI}}$       |   97.6   |   98.2   |   85.6   |   78.2   |   89.9   |
 | $\mathrm{MergeVLA_{TIES}}$       |   94.8   |   94.6   | **91.8** | **79.4** | **90.2** |
+
+### Real World Dataset
+For real-world experiments, we follow the same training pipeline as LIBERO. 
+The only difference is that the dataset is first converted into the LeRobot format before training. You can convert your dataset via [any4lerobot](https://github.com/Tavish9/any4lerobot).
 
 ---
 
@@ -99,21 +103,26 @@ The MergeVLA expert models trained on LIBERO are available [here](https://huggin
 ## :twisted_rightwards_arrows: Model Merging
 
 Model merging is implemented in `model_merging/mergy.py`. The merge algorithm is selected using `algo_name = ["TATallMask", "weighted_average"]`, where the first option merges the VLM of the model (which relies on a pretrained backbone), and the second merges the un-pretrained components, namely the action query, action head, and proprio projector, using weighted averaging by default. All available algorithms are implemented in `get_algo()`. Because merging requires access to the pretrained VLM and loading it directly is slow, we use `save_vlm()` to store the pretrained VLM inside the MergeVLA structure with zero-initialized action queries, and then use `load_vlm_from_vla()` for fast reloading during subsequent merges.
+The `merge()` function supports two modes:
+- Without `eval_task`, it produces a generalist model by merging all tasks and constructing a MoE action head with stored task masks.
+- With `eval_task`, it generates a task-specific model by performing merging on shared components while keeping non-mergeable parts from the target task and applying the corresponding mask.
 
 ```python
 if __name__ == "__main__":
     merged_tasks = ["spatial", "object", "goal", "10"]
     algo_name = ["TATallMask", "weighted_average"]
+
+    # Merge all tasks into a single unified model with MoE action head (store all task-specific components and masks)
     action_head_layer_num = 1
     k_gate = 8
-
-    merge(
-        merged_tasks=merged_tasks,
-        algo_name=algo_name,
-        k_gate=k_gate,
-        action_head_layer_num=action_head_layer_num,
-        note=f'{len(merged_tasks)}tasks_AHnum_{action_head_layer_num}_k_{k_gate}'
-    )
+    merge(merged_tasks=merged_tasks, algo_name=algo_name, k_gate=k_gate, action_head_layer_num=action_head_layer_num, 
+                          note=f'AHnum_{action_head_layer_num}_k_{k_gate}')
+    
+    # Merge models for a specific evaluation task
+    eval_task = "spatial"
+    merge(merged_tasks=merged_tasks, algo_name=algo_name, 
+          eval_task=TaskSuite(tasks[eval_task]),
+          note=f'eval_{eval_task}')
 ```
 
 ---
@@ -129,6 +138,19 @@ bash bash_scripts/eval.sh
 bash bash_scripts/eval_merged.sh
 ```
 For **LIBERO-plus** evaluation, we use **the same checkpoints trained on LIBERO** (available via the links above); only the environment needs to be switched to LIBERO-plus.
+
+We also provide an implementation compatible with the **LeRobot** framework. To use it, first install LeRobot following the official instructions in the [here](https://github.com/huggingface/lerobot). Then copy `lerobot_code/mergevla` from this repository into `src/lerobot/policies` under your local LeRobot codebase. The policy can be loaded as follows:
+
+```python
+from lerobot.policies.mergevla import MergeVLAPolicy, MergeVLAConfig
+
+cfg = MergeVLAConfig(
+    pretrained_checkpoint="path/to/your/checkpoint",
+    device="cuda",
+)
+policy = MergeVLAPolicy(cfg)
+```
+Note that the current LeRobot-compatible code does not support the router or MoE-based action head. Therefore, it can only load a single set of task-specific weights. As described in [Model Merging](#twisted_rightwards_arrows-model-merging), please use the `eval_task` mode to merge the model.
 
 
 ---
