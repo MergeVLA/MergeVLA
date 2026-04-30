@@ -139,7 +139,7 @@ bash bash_scripts/eval_merged.sh
 ```
 For **LIBERO-plus** evaluation, we use **the same checkpoints trained on LIBERO** (available via the links above); only the environment needs to be switched to LIBERO-plus.
 
-We also provide an implementation compatible with the **LeRobot** framework. To use it, first install LeRobot following the official instructions in the [here](https://github.com/huggingface/lerobot). Then copy `lerobot_code/mergevla` from this repository into `src/lerobot/policies` under your local LeRobot codebase. The policy can be loaded as follows:
+We also provide an implementation compatible with the **LeRobot** framework. To use it, first install LeRobot following the official [instructions](https://github.com/huggingface/lerobot). Then copy `lerobot_code/mergevla` from this repository into `src/lerobot/policies` under your local LeRobot codebase. The policy can be loaded as follows:
 
 ```python
 from lerobot.policies.mergevla import MergeVLAPolicy, MergeVLAConfig
