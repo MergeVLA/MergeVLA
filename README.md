@@ -51,6 +51,7 @@ pip install git+https://github.com/moojink/dlimp_openvla
 git clone https://github.com/Lifelong-Robot-Learning/LIBERO.git
 cd LIBERO
 pip install -e .
+cd ..
 pip install -r experiments/robot/libero/libero_requirements.txt
 
 # Install FusionBench
